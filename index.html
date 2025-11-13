@@ -59,6 +59,38 @@
     }
     .hidden { display: none; }
   </style>
+  <script>
+    const apiUrl = "https://script.google.com/macros/s/AKfycbxPqRcXaD8i3aGrhwMBgiHUB9nvX7hXF5EIgAENVA3swSHg5YURMKSo6hyfZkAFmugW/exec";
+
+    async function checkSaldo() {
+    const kaartId = document.getElementById("kaartId").value.trim();
+    if (!kaartId) return;
+
+    const saldoDiv = document.getElementById("saldo");
+    saldoDiv.innerText = "Saldo ophalen...";
+    saldoDiv.className = "text-gray-500";
+
+    try {
+        const response = await fetch(`${apiUrl}?action=getSaldo&id=${encodeURIComponent(kaartId)}`);
+        const data = await response.json();
+
+        if (data && data.saldo !== null && data.saldo !== undefined) {
+        const saldo = parseFloat(data.saldo);
+        saldoDiv.innerText = `Saldo: €${saldo.toFixed(2)}`;
+
+        if (saldo <= 0) saldoDiv.className = "text-red-600 font-bold";
+        else if (saldo < 2) saldoDiv.className = "text-yellow-600 font-semibold";
+        else saldoDiv.className = "text-green-600 font-semibold";
+        } else {
+        saldoDiv.innerText = "Geen saldo gevonden.";
+        saldoDiv.className = "text-red-500";
+        }
+    } catch (error) {
+        saldoDiv.innerText = "Fout bij ophalen saldo.";
+        saldoDiv.className = "text-red-500";
+    }
+    }
+    </script>
 </head>
 <body>
   <h1>Drankkaart Beheer</h1>

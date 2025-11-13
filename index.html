@@ -2,171 +2,187 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Drankkaart Beheer</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body {
-      font-family: "Segoe UI", sans-serif;
-      background: #f7f8fa;
-      color: #333;
-      text-align: center;
-      padding: 2em;
-    }
-    h1 { color: #2c3e50; }
-    .card {
-      background: white;
-      display: inline-block;
-      padding: 20px 30px;
-      border-radius: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      max-width: 400px;
-      width: 100%;
-    }
-    input {
-      width: 80%;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 16px;
-    }
-    button {
-      background: #3498db;
-      color: white;
-      border: none;
-      padding: 12px 20px;
-      border-radius: 10px;
-      margin: 8px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    button:hover { background: #2980b9; }
-    .danger { background: #e74c3c; }
-    .danger:hover { background: #c0392b; }
-    .success { background: #27ae60; }
-    .success:hover { background: #1e8449; }
-    #result {
-      margin-top: 20px;
-      font-size: 18px;
-    }
-    #transacties {
-      margin-top: 10px;
-      text-align: left;
-      font-size: 14px;
-      max-height: 150px;
-      overflow-y: auto;
-    }
-    .hidden { display: none; }
-  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white shadow-lg rounded-2xl p-8 w-full max-w-md">
+    <h1 class="text-2xl font-bold text-center text-indigo-700 mb-6">
+      ☕ Drankkaart Beheer
+    </h1>
+
+    <!-- Gebruiker info -->
+    <div id="userInfo" class="hidden mb-6 text-right text-sm text-gray-500"></div>
+
+    <!-- Login-scherm -->
+    <div id="loginScreen">
+      <p class="text-gray-700 mb-2 font-semibold">Voer je pincode in:</p>
+      <input id="pincode" type="password" maxlength="4"
+             placeholder="****"
+             class="border border-gray-300 rounded px-3 py-2 w-full focus:ring focus:ring-indigo-200 mb-3">
+      <button onclick="checkLogin()"
+              class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-xl w-full shadow">
+        Inloggen
+      </button>
+      <p id="loginStatus" class="text-center text-red-500 mt-2 text-sm"></p>
+    </div>
+
+    <!-- Hoofdscherm -->
+    <div id="mainScreen" class="hidden">
+      <!-- Kaart-ID invoer -->
+      <div class="mb-4">
+        <label for="kaartId" class="block text-gray-700 font-semibold mb-1">
+          Kaart-ID
+        </label>
+        <input id="kaartId" type="text"
+               placeholder="Scan of typ Kaart-ID"
+               class="border border-gray-300 rounded px-3 py-2 w-full focus:ring focus:ring-indigo-200"
+               oninput="checkSaldo()" />
+        <p id="saldo" class="mt-2 text-gray-500">Saldo nog niet opgehaald.</p>
+      </div>
+
+      <!-- Bedrag kiezen -->
+      <div class="mb-6">
+        <label class="block text-gray-700 font-semibold mb-1">Bedrag</label>
+        <select id="bedrag" class="border border-gray-300 rounded px-3 py-2 w-full">
+          <option value="2">€2,00</option>
+          <option value="2">€4,00</option>
+          <option value="2">€6,00</option>
+          <option value="2">€8,00</option>
+          <option value="2.5">€2,50</option>
+          <option value="5">€5,00</option>
+          <option value="7.5">€7,50</option>
+          <option value="10">€10,00</option>
+        </select>
+      </div>
+
+      <!-- Knoppen -->
+      <div class="flex justify-between mb-4">
+        <button onclick="updateSaldo(-1)"
+                class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-xl w-[48%] shadow">
+          💳 Afboeken
+        </button>
+        <button onclick="updateSaldo(1)"
+                class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-xl w-[48%] shadow">
+          ➕ Opladen
+        </button>
+      </div>
+
+      <!-- Feedback -->
+      <p id="status" class="text-center text-gray-600 text-sm"></p>
+
+      <div class="text-center mt-6">
+        <button onclick="logout()" class="text-sm text-gray-400 hover:text-red-500 underline">
+          Uitloggen
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    const apiUrl = "https://script.google.com/macros/s/AKfycbxPqRcXaD8i3aGrhwMBgiHUB9nvX7hXF5EIgAENVA3swSHg5YURMKSo6hyfZkAFmugW/exec";
+    const apiUrl = "https://script.google.com/macros/s/AKfycbxPqRcXaD8i3aGrhwMBgiHUB9nvX7hXF5EIgAENVA3swSHg5YURMKSo6hyfZkAFmugW/exec"; // jouw Apps Script URL
 
+    // 🔐 Definieer jouw pincodes en namen
+    const gebruikers = {
+      "2303": "Kevin",   // jij
+      "291280": "Thérèse",   // assistente 1
+      "1234": "Annemarie"     // assistente 2
+    };
+
+    let huidigeGebruiker = localStorage.getItem("gebruiker");
+
+    // Controleer of iemand al is ingelogd
+    if (huidigeGebruiker) {
+      toonHoofdscherm(huidigeGebruiker);
+    }
+
+    function checkLogin() {
+      const code = document.getElementById("pincode").value.trim();
+      const naam = gebruikers[code];
+      const status = document.getElementById("loginStatus");
+
+      if (naam) {
+        huidigeGebruiker = naam;
+        localStorage.setItem("gebruiker", naam);
+        toonHoofdscherm(naam);
+      } else {
+        status.innerText = "❌ Ongeldige code";
+      }
+    }
+
+    function toonHoofdscherm(naam) {
+      document.getElementById("loginScreen").classList.add("hidden");
+      document.getElementById("mainScreen").classList.remove("hidden");
+      document.getElementById("userInfo").innerText = `Ingelogd als: ${naam}`;
+      document.getElementById("userInfo").classList.remove("hidden");
+    }
+
+    function logout() {
+      localStorage.removeItem("gebruiker");
+      huidigeGebruiker = null;
+      document.getElementById("mainScreen").classList.add("hidden");
+      document.getElementById("userInfo").classList.add("hidden");
+      document.getElementById("loginScreen").classList.remove("hidden");
+      document.getElementById("pincode").value = "";
+      document.getElementById("loginStatus").innerText = "";
+    }
+
+    // 🧮 Saldo ophalen
     async function checkSaldo() {
-    const kaartId = document.getElementById("kaartId").value.trim();
-    if (!kaartId) return;
+      const kaartId = document.getElementById("kaartId").value.trim();
+      if (!kaartId) return;
 
-    const saldoDiv = document.getElementById("saldo");
-    saldoDiv.innerText = "Saldo ophalen...";
-    saldoDiv.className = "text-gray-500";
+      const saldoDiv = document.getElementById("saldo");
+      saldoDiv.innerText = "Saldo ophalen...";
+      saldoDiv.className = "mt-2 text-gray-500";
 
-    try {
+      try {
         const response = await fetch(`${apiUrl}?action=getSaldo&id=${encodeURIComponent(kaartId)}`);
         const data = await response.json();
 
         if (data && data.saldo !== null && data.saldo !== undefined) {
-        const saldo = parseFloat(data.saldo);
-        saldoDiv.innerText = `Saldo: €${saldo.toFixed(2)}`;
+          const saldo = parseFloat(data.saldo);
+          saldoDiv.innerText = `Saldo: €${saldo.toFixed(2)}`;
 
-        if (saldo <= 0) saldoDiv.className = "text-red-600 font-bold";
-        else if (saldo < 2) saldoDiv.className = "text-yellow-600 font-semibold";
-        else saldoDiv.className = "text-green-600 font-semibold";
+          if (saldo <= 0) saldoDiv.className = "mt-2 text-red-600 font-bold";
+          else if (saldo < 2) saldoDiv.className = "mt-2 text-yellow-600 font-semibold";
+          else saldoDiv.className = "mt-2 text-green-600 font-semibold";
         } else {
-        saldoDiv.innerText = "Geen saldo gevonden.";
-        saldoDiv.className = "text-red-500";
+          saldoDiv.innerText = "Geen saldo gevonden.";
+          saldoDiv.className = "mt-2 text-red-500";
         }
-    } catch (error) {
+      } catch (error) {
         saldoDiv.innerText = "Fout bij ophalen saldo.";
-        saldoDiv.className = "text-red-500";
-    }
-    }
-    </script>
-</head>
-<body>
-  <h1>Drankkaart Beheer</h1>
-
-  <div class="card" id="loginCard">
-    <h3>Beveiligde toegang</h3>
-    <p>Voer je pincode in om te starten:</p>
-    <input type="password" id="pin" placeholder="Pincode">
-    <br>
-    <button onclick="checkPin()">Inloggen</button>
-    <p id="pinError" style="color:red;"></p>
-  </div>
-
-  <div class="card hidden" id="mainCard">
-    <h3>Saldo beheren</h3>
-    <input id="kaartId" placeholder="Kaart-ID of scan NFC-kaart">
-    <br>
-    <button class="danger" onclick="updateSaldo(-2)">– 2 €</button>
-    <button class="danger" onclick="updateSaldo(-2.5)">– 2.5 €</button>
-    <button class="success" onclick="updateSaldo(10)">+ 10 € (opladen)</button>
-    <div id="result"></div>
-    <div id="transacties"></div>
-  </div>
-
-  <script>
-    // 🔒 Je persoonlijke pincode (pas aan!)
-    const ADMIN_PIN = "2303";
-
-    // 🔗 Vervang dit door je echte Google Apps Script URL:
-    const apiUrl = "https://script.google.com/macros/s/AKfycbxPqRcXaD8i3aGrhwMBgiHUB9nvX7hXF5EIgAENVA3swSHg5YURMKSo6hyfZkAFmugW/exec";
-
-    // 🔑 PIN-beveiliging
-    function checkPin() {
-      const pin = document.getElementById("pin").value;
-      if (pin === ADMIN_PIN) {
-        document.getElementById("loginCard").classList.add("hidden");
-        document.getElementById("mainCard").classList.remove("hidden");
-      } else {
-        document.getElementById("pinError").innerText = "Foute pincode!";
+        saldoDiv.className = "mt-2 text-red-500";
       }
     }
 
-    // 💰 Saldo updaten
-    async function updateSaldo(bedrag) {
-      const id = document.getElementById("kaartId").value.trim();
-      if (!id) return alert("Voer een kaart-ID in of scan de NFC-kaart.");
+    // 💳 Saldo aanpassen
+    async function updateSaldo(factor) {
+      const kaartId = document.getElementById("kaartId").value.trim();
+      const bedrag = parseFloat(document.getElementById("bedrag").value);
+      const statusDiv = document.getElementById("status");
 
-      const door = prompt("Naam van uitvoerder (coach/assistent):");
-      if (!door) return;
-
-      const url = `${apiUrl}?action=updateSaldo&id=${id}&bedrag=${bedrag}&door=${encodeURIComponent(door)}`;
-      const res = await fetch(url);
-      const data = await res.json();
-
-      if (data.succes) {
-        document.getElementById("result").innerHTML =
-          `<strong>Nieuw saldo:</strong> €${data.nieuwSaldo.toFixed(2)}`;
-        loadTransacties(id);
-      } else {
-        document.getElementById("result").innerText = "Fout bij verwerken!";
+      if (!kaartId) {
+        statusDiv.innerText = "Voer eerst een Kaart-ID in.";
+        statusDiv.className = "text-center text-red-500";
+        return;
       }
-    }
 
-    // 📜 Laatste transacties ophalen
-    async function loadTransacties(id) {
-      const res = await fetch(`${apiUrl}?action=getSaldo&id=${id}&token=--INTERN--`);
-      const data = await res.json();
-      const tDiv = document.getElementById("transacties");
-      if (data.transacties && data.transacties.length > 0) {
-        tDiv.innerHTML = "<h4>Laatste transacties:</h4><ul>" +
-          data.transacties.map(t =>
-            `<li>${new Date(t[0]).toLocaleString()} — ${t[3]} → €${t[4]}</li>`
-          ).join("") +
-          "</ul>";
-      } else {
-        tDiv.innerHTML = "<p>Geen transacties gevonden.</p>";
+      const actie = factor === 1 ? "opgeladen" : "afgeboekt";
+      const door = huidigeGebruiker || "Onbekend";
+      const url = `${apiUrl}?action=updateSaldo&id=${encodeURIComponent(kaartId)}&bedrag=${factor * bedrag}&door=${encodeURIComponent(door)}`;
+
+      try {
+        const response = await fetch(url);
+        const text = await response.text();
+        statusDiv.innerText = `✅ ${Math.abs(bedrag).toFixed(2)} euro ${actie} door ${door}.`;
+        statusDiv.className = "text-center text-green-600 font-semibold";
+        checkSaldo(); // update saldo
+      } catch (error) {
+        statusDiv.innerText = "⚠️ Fout bij bijwerken saldo.";
+        statusDiv.className = "text-center text-red-500";
       }
     }
   </script>

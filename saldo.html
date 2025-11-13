@@ -2,26 +2,131 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
-  <title>Mijn saldo</title>
+  <title>Mijn Drankkaart Saldo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, #74b9ff, #a29bfe);
+      color: #2c3e50;
+      text-align: center;
+      padding: 2em;
+      margin: 0;
+    }
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      padding: 25px;
+      max-width: 400px;
+      margin: 2em auto;
+      transition: 0.3s;
+    }
+    .card:hover { transform: translateY(-2px); }
+    h1 { color: #2c3e50; margin-bottom: 0.2em; }
+    h2 { margin-top: 0; color: #0984e3; }
+    .saldo {
+      font-size: 2em;
+      font-weight: bold;
+      color: #27ae60;
+      margin: 0.4em 0;
+    }
+    .loader {
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #3498db;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 40px auto;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    ul {
+      text-align: left;
+      list-style: none;
+      padding: 0;
+      margin-top: 15px;
+    }
+    li {
+      background: #f4f6f8;
+      margin: 5px 0;
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+    .error {
+      color: red;
+      margin-top: 1em;
+    }
+    footer {
+      margin-top: 30px;
+      font-size: 12px;
+      color: #555;
+    }
+  </style>
 </head>
 <body>
-  <h1>Saldo-overzicht</h1>
-  <div id="output"></div>
+  <div class="card" id="content">
+    <h1>Mijn Drankkaart</h1>
+    <div id="loader" class="loader"></div>
+    <div id="data" style="display:none;">
+      <h2 id="naam"></h2>
+      <p class="saldo" id="saldo"></p>
+      <h3>Laatste transacties</h3>
+      <ul id="transacties"></ul>
+    </div>
+    <p id="error" class="error"></p>
+  </div>
+
+  <footer>
+    © <span id="jaar"></span> WeightWatchers Drankkaart Systeem
+  </footer>
+
   <script>
     const apiUrl = "https://script.google.com/macros/s/AKfycbwYGJJrGUcJ-MpPMpybsRZcf23xIDo61TzK3zIgrZ1sUlJysivlftx3ybQR1PN0no2i/exec";
     const params = new URLSearchParams(window.location.search);
     const id = params.get("id");
     const token = params.get("token");
 
+    document.getElementById("jaar").innerText = new Date().getFullYear();
+
     async function loadSaldo() {
-      const res = await fetch(`${apiUrl}?action=getSaldo&id=${id}&token=${token}`);
-      const data = await res.json();
-      document.body.innerHTML = `
-        <h2>${data.naam}</h2>
-        <p>Huidig saldo: <strong>€${data.saldo.toFixed(2)}</strong></p>
-        <h3>Laatste transacties</h3>
-        <ul>${data.transacties.map(t => `<li>${t[0]}: ${t[3]} → €${t[4]}</li>`).join('')}</ul>`;
+      try {
+        if (!id || !token) {
+          document.getElementById("error").innerText = "Ongeldige link. Neem contact op met je coach.";
+          document.getElementById("loader").style.display = "none";
+          return;
+        }
+
+        const res = await fetch(`${apiUrl}?action=getSaldo&id=${id}&token=${token}`);
+        const data = await res.json();
+
+        if (!data.naam) {
+          document.getElementById("error").innerText = "Kaart niet gevonden of ongeldig token.";
+          document.getElementById("loader").style.display = "none";
+          return;
+        }
+
+        document.getElementById("naam").innerText = data.naam;
+        document.getElementById("saldo").innerText = `€${data.saldo.toFixed(2)}`;
+        document.getElementById("loader").style.display = "none";
+        document.getElementById("data").style.display = "block";
+
+        const ul = document.getElementById("transacties");
+        if (data.transacties && data.transacties.length > 0) {
+          ul.innerHTML = data.transacties.map(t =>
+            `<li>${new Date(t[0]).toLocaleDateString('nl-BE', { day:'2-digit', month:'2-digit', year:'2-digit' })} – ${t[3]} → €${t[4]}</li>`
+          ).join('');
+        } else {
+          ul.innerHTML = "<li>Geen transacties gevonden.</li>";
+        }
+      } catch (e) {
+        document.getElementById("error").innerText = "Er is iets misgegaan bij het ophalen van de gegevens.";
+        document.getElementById("loader").style.display = "none";
+      }
     }
+
     loadSaldo();
   </script>
 </body>

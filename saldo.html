@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <title>Mijn saldo</title>
+</head>
+<body>
+  <h1>Saldo-overzicht</h1>
+  <div id="output"></div>
+  <script>
+    const apiUrl = "JOUW_WEBAPP_URL_HIER";
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
+    const token = params.get("token");
+
+    async function loadSaldo() {
+      const res = await fetch(`${apiUrl}?action=getSaldo&id=${id}&token=${token}`);
+      const data = await res.json();
+      document.body.innerHTML = `
+        <h2>${data.naam}</h2>
+        <p>Huidig saldo: <strong>€${data.saldo.toFixed(2)}</strong></p>
+        <h3>Laatste transacties</h3>
+        <ul>${data.transacties.map(t => `<li>${t[0]}: ${t[3]} → €${t[4]}</li>`).join('')}</ul>`;
+    }
+    loadSaldo();
+  </script>
+</body>
+</html>

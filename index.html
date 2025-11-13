@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <title>Drankkaart beheer</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; margin-top: 2em; }
+    button { margin: 5px; padding: 10px 20px; font-size: 16px; }
+    #result { margin-top: 20px; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <h1>Drankkaart Beheer</h1>
+  <input id="kaartId" placeholder="Kaart-ID">
+  <br>
+  <button onclick="updateSaldo(-2)">– 2 €</button>
+  <button onclick="updateSaldo(-2.5)">– 2.5 €</button>
+  <button onclick="updateSaldo(10)">+ 10 €</button>
+  <div id="result"></div>
+
+  <script>
+    const apiUrl = "JOUW_WEBAPP_URL_HIER"; // plak je Apps Script URL
+
+    async function updateSaldo(bedrag) {
+      const id = document.getElementById("kaartId").value.trim();
+      if (!id) return alert("Voer een kaart-ID in");
+      const door = prompt("Wie voert dit uit?");
+      const url = `${apiUrl}?action=updateSaldo&id=${id}&bedrag=${bedrag}&door=${encodeURIComponent(door)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      document.getElementById("result").innerText = 
+        `Nieuw saldo: €${data.nieuwSaldo.toFixed(2)}`;
+    }
+  </script>
+</body>
+</html>

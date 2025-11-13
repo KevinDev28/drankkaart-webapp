@@ -155,6 +155,7 @@
       } catch (error) {
         saldoDiv.innerText = "Fout bij ophalen saldo.";
         saldoDiv.className = "mt-2 text-red-500";
+        console.error(error);
       }
     }
 
